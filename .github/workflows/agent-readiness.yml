@@ -1,0 +1,41 @@
+name: Agent readiness
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  static-safety:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile Python sources
+        run: python -m py_compile run.py task_registry.py utils.py
+      - name: Validate agent contract files
+        run: |
+          test -s AGENTS.md
+          test -s CLAUDE.md
+          test -s .ai/PRODUCT_SPEC.md
+          test -s .ai/DEFINITION_OF_DONE.md
+          test -s .ai/ARCHITECTURE.md
+          test -s .ai/PROJECT_STATE.md
+          test -s .ai/permissions.yaml
+      - name: Reject committed secrets and generated outputs
+        run: |
+          if git ls-files | grep -E '(^|/)(\.env|id_rsa|id_ed25519)$'; then
+            echo 'Forbidden secret file is tracked'
+            exit 1
+          fi
+          if git ls-files | grep -E '(^|/)(__pycache__|results)/'; then
+            echo 'Generated output is tracked'
+            exit 1
+          fi
+      - name: Check whitespace errors
+        run: git diff --check HEAD^
