@@ -1,0 +1,56 @@
+version: 1
+
+write_policy:
+  default_branch: main
+  direct_push_to_default: false
+  require_feature_branch: true
+  require_pull_request: true
+  allow_agent_merge: false
+
+limits:
+  max_repair_attempts_per_failure: 3
+  max_files_changed_per_issue: 12
+  max_parallel_issues: 1
+  stop_on_repeated_failure: true
+
+allowed_commands:
+  - git status
+  - git diff
+  - git diff --check
+  - git add
+  - git commit
+  - python
+  - pytest
+  - ruff
+  - pyright
+  - mypy
+  - pip install
+  - gh issue view
+  - gh pr create
+  - gh pr view
+  - gh run view
+
+forbidden_patterns:
+  - sudo
+  - git push --force
+  - git reset --hard main
+  - rm -rf /
+  - curl * | sh
+  - wget * | sh
+  - cat ~/.ssh/*
+  - env
+  - printenv
+
+secret_policy:
+  allowed_names:
+    - HF_TOKEN
+    - ANTHROPIC_API_KEY
+    - OPENAI_API_KEY
+  never_log_secret_values: true
+  never_commit_dotenv: true
+
+execution_policy:
+  generated_code_requires_isolation: true
+  network_disabled_for_generated_code: true
+  repository_write_disabled_for_generated_code: true
+  enforce_timeout: true
