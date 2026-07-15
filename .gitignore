@@ -1,0 +1,33 @@
+# Private reference material
+private_reference/
+private/
+drafts/
+*.private.ipynb
+*.private.zip
+
+# Generated experiment outputs
+results/
+artifacts/
+*.jsonl
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Editors and OS
+.DS_Store
+.vscode/
+.idea/
