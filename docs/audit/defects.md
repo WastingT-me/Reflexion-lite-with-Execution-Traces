@@ -36,10 +36,18 @@ and importing `run` directly raised `ModuleNotFoundError: No module named 'utils
 not run at all**, for any `--method`. This was not a notebook-recovery gap; it was a filename
 typo in already-"working" public code.
 
-## D2 — CRITICAL: CI's own generated-output gate fails against tracked `main`
+## D2 — RESOLVED (was CRITICAL): CI's own generated-output gate fails against tracked `main`
 
-`.github/workflows/agent-readiness.yml` fails the build if `git ls-files` matches
-`(^|/)(__pycache__|results)/`. Three files are already tracked under `results/`:
+**Status: RESOLVED on `main` as of commit `47169de` ("ci: allow-list tracked historical pilot
+artifacts", PR #6, merged 2026-07-19), which implemented Issue #5 Option A.** The workflow now
+explicitly allow-lists the three named historical files by exact path while continuing to reject
+any other tracked path under `__pycache__/` or `results/`. This fix was made outside this audit
+issue's scope, as an owner-directed decision (Option A: keep the files, allow-list them) resolving
+the open question this entry originally raised.
+
+Original finding, preserved for the record: `.github/workflows/agent-readiness.yml` failed the
+build if `git ls-files` matched `(^|/)(__pycache__|results)/`. Three files were already tracked
+under `results/`:
 
 ```text
 $ git ls-files | grep -E '(^|/)(__pycache__|results)/'
@@ -49,9 +57,9 @@ results/pilot5_semantic_feedback.jsonl
 ```
 
 These are real historical pilot artifacts (see `notebook_inventory.md` §3) and appear intentionally
-committed as evidence, but `.gitignore`'s `results/` rule and the CI gate both treat `results/` as
-disposable generated output. D1 is now resolved, but CI on `main` should still be red on this gate
-alone; this needs an owner decision (`recovery_plan.md`), not a silent fix.
+committed as evidence, but `.gitignore`'s `results/` rule and the CI gate both treated `results/` as
+disposable generated output. D1 was resolved first, after which CI on `main` was still red on this
+gate alone, needing the owner decision (`recovery_plan.md`) that PR #6 subsequently implemented.
 
 ## D3 — HIGH: `reflexion+trace` is not "unimplemented," it is "unwired"
 

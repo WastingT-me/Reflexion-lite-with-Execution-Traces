@@ -55,11 +55,12 @@ reflexion_lite/trace_pipeline/historical.py    recovered — schema known exactl
    Fixed on `main` by commit `70880ed` (PR #4, merged 2026-07-19), outside this audit issue's
    scope. No longer blocks the rest of this backlog — see `defects.md` D1.
 
-2. **Resolve the tracked-`results/`-vs-CI-gate conflict (owner-directed decision required).**
-   Either (a) explicitly allow the three named historical files in the CI grep / document them as
-   permanent evidence outside `results/`, or (b) move them to a clearly non-generated location
-   (e.g. `docs/audit/historical_artifacts/`). Category: Owner-directed.
+2. **DONE — Resolve the tracked-`results/`-vs-CI-gate conflict (owner-directed decision required).**
+   Option (a) was chosen: the three named historical files are explicitly allow-listed in the CI
+   grep; everything else under `results/`/`__pycache__/` is still rejected. Category: Owner-directed.
    Test: `.github/workflows/agent-readiness.yml`'s tracked-output step passes.
+   Fixed on `main` by commit `47169de` (PR #6, Issue #5, merged 2026-07-19), outside this audit
+   issue's scope — see `defects.md` D2.
 
 3. **Add dependency metadata and a minimal deterministic test suite.**
    Cover: task selection (`task_registry.py`), `extract_python_code`, `save_jsonl`/`load_jsonl`,
@@ -106,9 +107,10 @@ reflexion_lite/trace_pipeline/historical.py    recovered — schema known exactl
 
 ## Unresolved owner questions
 
-1. Should `results/pilot5_humaneval_tests.jsonl`, `pilot5_python_solutions.jsonl`, and
-   `pilot5_semantic_feedback.jsonl` remain tracked as intentional historical evidence, contradicting
-   both `.gitignore` and the CI gate (D2)? If yes, where should they live so CI stops flagging them?
+1. **ANSWERED (Issue #5, PR #6):** yes — `results/pilot5_humaneval_tests.jsonl`,
+   `pilot5_python_solutions.jsonl`, and `pilot5_semantic_feedback.jsonl` remain tracked as
+   intentional historical evidence, in place under `results/`. The CI gate was updated to
+   explicitly allow-list these three exact paths rather than relocating them.
 2. Between the notebooks' two divergent `reflexion+trace` designs — single-shot
    `run_single_semantic_repair` vs. iterative `run_reflection_with_trace` with a static trace reused
    every retry — which should `reflexion_lite/agents.py`'s Solver implement?
