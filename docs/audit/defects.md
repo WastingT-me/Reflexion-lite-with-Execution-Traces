@@ -1,21 +1,39 @@
 # Defect and Risk Register
 
 Severity is about impact on getting a correct, reproducible `reflexion+trace` implementation
-running, not about elegance. Nothing here was fixed — this issue is audit-only. Each item states
-how it was verified.
+running, not about elegance. Nothing here was fixed by this issue — this issue is audit-only.
+Each item states how it was verified. D1 was subsequently fixed by an unrelated, out-of-scope PR
+and is marked resolved below; that fix was not made as part of this audit.
 
-## D1 — CRITICAL: `run.py` cannot import its own implementation module
+## D1 — RESOLVED (was CRITICAL): `run.py` cannot import its own implementation module
 
-`run.py` does `from utils import (...)`. The implementation file on disk is `utills.py` (double
-"l"). Verified by running the exact command `AGENTS.md` lists as a mandatory check:
+**Status: RESOLVED on `main` as of commit `70880ed` ("fix: restore utils module name", PR #4,
+merged 2026-07-19).** The implementation file was renamed `utills.py` -> `utils.py`, matching
+`run.py`'s `from utils import (...)`. Re-running the exact mandatory check now succeeds:
+
+```text
+$ python -m py_compile run.py task_registry.py utils.py
+$ echo $?
+0
+```
+
+`import run` still raises, but now only on the unrelated, expected `ModuleNotFoundError: No
+module named 'torch'` (no dependency manifest/environment exists yet at this project stage), not
+on the module-name mismatch. This fix landed as a standalone bug-fix PR, outside this audit
+issue's scope; this entry is updated only because the audit branch was synced with `main` after
+the fix merged.
+
+Original finding, preserved for the record: `run.py` did `from utils import (...)` while the
+implementation file on disk was `utills.py` (double "l"), so the exact command `AGENTS.md` lists
+as a mandatory check failed:
 
 ```text
 $ python -m py_compile run.py task_registry.py utils.py
 FileNotFoundError: [Errno 2] No such file or directory: 'utils.py'
 ```
 
-and by importing `run` directly (`ModuleNotFoundError: No module named 'utils'`). **The CLI does
-not run at all today**, for any `--method`. This is not a notebook-recovery gap; it is a filename
+and importing `run` directly raised `ModuleNotFoundError: No module named 'utils'`. **The CLI did
+not run at all**, for any `--method`. This was not a notebook-recovery gap; it was a filename
 typo in already-"working" public code.
 
 ## D2 — CRITICAL: CI's own generated-output gate fails against tracked `main`
@@ -32,12 +50,12 @@ results/pilot5_semantic_feedback.jsonl
 
 These are real historical pilot artifacts (see `notebook_inventory.md` §3) and appear intentionally
 committed as evidence, but `.gitignore`'s `results/` rule and the CI gate both treat `results/` as
-disposable generated output. CI on `main` should currently be red because of D1 and D2 together;
-this needs an owner decision (`recovery_plan.md`), not a silent fix.
+disposable generated output. D1 is now resolved, but CI on `main` should still be red on this gate
+alone; this needs an owner decision (`recovery_plan.md`), not a silent fix.
 
 ## D3 — HIGH: `reflexion+trace` is not "unimplemented," it is "unwired"
 
-`utills.py` already contains a complete `solve_task_reflexion_trace` and
+`utils.py` already contains a complete `solve_task_reflexion_trace` and
 `build_trace_reflection_prompt`, mirroring the retry-loop shape of `solve_task_reflexion_lite` plus
 a trace-feedback field. Neither is imported or called from `run.py`. The reason `run.py` raises
 `NotImplementedError` is that nothing in the public repo produces the `trace_feedback` string these
@@ -98,22 +116,22 @@ were re-run).
 
 ## D9 — LOW: two independent, non-identical implementations of core helpers
 
-- **Code-fence extraction**: notebook `extract_code` (single-fence regex) vs. `utills.py`'s
+- **Code-fence extraction**: notebook `extract_code` (single-fence regex) vs. `utils.py`'s
   `extract_python_code` (two-stage fallback: python-tagged fence, bare fence, raw text). The public
   version is a superset of the notebook behavior, not a regression.
 - **Sandboxed execution**: notebook `_run_test_in_subprocess`/`run_humaneval_test` (two separate
-  `exec()` calls sharing a dict, explicit `check(candidate)` call) vs. `utills.py`'s
+  `exec()` calls sharing a dict, explicit `check(candidate)` call) vs. `utils.py`'s
   `_run_code_worker`/`run_code_with_tests` (single concatenated `exec()` of code + test +
   `check(entry_point)`). Both use `multiprocessing.Process` + timeout + queue and are conceptually
   equivalent, but not byte-for-byte the same execution strategy — worth characterizing with tests
   before consolidating into one `PythonExecutor`.
 - **Prompt construction**: notebook `build_baseline_prompt` applies the tokenizer's chat template;
-  `utills.py::build_baseline_prompt` returns a raw f-string with no chat template. This is a real
+  `utils.py::build_baseline_prompt` returns a raw f-string with no chat template. This is a real
   behavioral difference for instruction-tuned models like Mistral-7B-Instruct and should be an
   explicit decision, not an accident, when consolidating.
 - **Reflection generation**: the notebook has a distinct "generate a natural-language reflection,
   then generate a retry" two-step loop (`generate_reflection` → `build_reflexion_retry_prompt`),
-  matching `paper.pdf`'s stated `feedback → reflection → regenerate` loop. `utills.py`'s
+  matching `paper.pdf`'s stated `feedback → reflection → regenerate` loop. `utils.py`'s
   `solve_task_reflexion_lite` skips the separate reflection-generation step and feeds the raw error
   text directly into the retry prompt. This is a simplification relative to both the notebook and
   the paper's described method, not merely a refactor.
@@ -122,7 +140,7 @@ were re-run).
 
 Generated HumanEval code is executed via `multiprocessing.Process` with only a wall-clock timeout —
 no memory/CPU limit, no filesystem or network restriction. This applies equally to the public
-`utills.py` and to every notebook variant. `.ai/DEFINITION_OF_DONE.md` requires "isolated
+`utils.py` and to every notebook variant. `.ai/DEFINITION_OF_DONE.md` requires "isolated
 subprocess/container with time and resource limits"; current state only satisfies the time part.
 
 ## D11 — INFO (positive finding): no hidden-solution leakage found
@@ -137,7 +155,7 @@ model-visible prompts or reflection feedback was found.
 Pattern search across all four notebooks for API-key-shaped strings (`sk-...`, `hf_...`, `ghp_...`,
 `AKIA...`, inline `api_key=`/`token=` literals) found nothing. `HF_TOKEN` is sourced from
 `os.environ` with an interactive `getpass` fallback in both the notebook and (equivalently) in
-`run.py`/`utills.py` via the `--hf-token` argument — no token is hard-coded anywhere inspected.
+`run.py`/`utils.py` via the `--hf-token` argument — no token is hard-coded anywhere inspected.
 
 ## D13 — LOW: Colab-only hard dependencies in the notebooks
 

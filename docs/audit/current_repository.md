@@ -22,7 +22,7 @@ paper.pdf                      author's preprint describing the experiment and p
 readme.md                      user-facing quick start
 run.py                         CLI entry point (argparse; baseline / reflexion-lite / reflexion+trace / all)
 task_registry.py               EASY/MEDIUM/BUG_PRONE task lists, TRACE_TASK_IDS, get_group()
-utills.py                      ~680 lines: dataset, prompting, generation, execution, metrics, persistence
+utils.py                       ~680 lines: dataset, prompting, generation, execution, metrics, persistence
 results/pilot5_humaneval_tests.jsonl       tracked historical pilot artifact
 results/pilot5_python_solutions.jsonl      tracked historical pilot artifact
 results/pilot5_semantic_feedback.jsonl     tracked historical pilot artifact
@@ -36,8 +36,9 @@ config exist yet, consistent with `.ai/PROJECT_STATE.md`'s `agent-ready-infrastr
 `run.py` parses `--method {baseline, reflexion-lite, reflexion+trace, all}` plus generation/exec
 parameters, loads the HumanEval `test` split, filters it to either `SELECTED_TASK_IDS` (30 tasks)
 or `TRACE_TASK_IDS` (5 tasks, via `--trace-only`), loads the Hugging Face model, then dispatches to
-`solve_task_baseline` / `solve_task_reflexion_lite` in `utills.py` (imported under the module name
-`utils`, see Defect D1 below). Results are written as JSONL under `--results-dir`.
+`solve_task_baseline` / `solve_task_reflexion_lite` in `utils.py` (see Defect D1, resolved — this
+file was `utills.py` at audit time and has since been renamed to match the `from utils import`
+statement in `run.py`). Results are written as JSONL under `--results-dir`.
 
 `task_registry.py`'s `EASY_TASKS` / `MEDIUM_TASKS` / `BUG_PRONE_TASKS` / `TRACE_TASK_IDS` were
 cross-checked against the private notebooks' equivalent lists (`EASY_TASKS`/`MEDIUM_TASKS`/
@@ -45,7 +46,7 @@ cross-checked against the private notebooks' equivalent lists (`EASY_TASKS`/`MED
 byte-identical in content, only reformatted with a `get_group()` helper and per-task comments
 added. This part is cleanly **inherited** from the notebooks.
 
-`utills.py` already contains more than `run.py` uses:
+`utils.py` already contains more than `run.py` uses:
 - `solve_task_baseline`, `solve_task_reflexion_lite` — wired into `run.py`, functional.
 - `solve_task_reflexion_trace`, `build_trace_reflection_prompt` — fully implemented but **never
   imported or called anywhere**. They expect a pre-computed `trace_feedback` string; nothing in the
@@ -76,13 +77,17 @@ results/pilot5_semantic_feedback.jsonl
 ```
 
 Both commands are the literal steps CI runs (`.github/workflows/agent-readiness.yml` lines 20 and
-36). Both currently fail against `main` as inspected on this branch. See `defects.md` D1 and D2 for
-detail and impact; this document only records that CI is not currently green and why, since fixing
-it is outside this issue's scope.
+36). Both failed against `main` as inspected when this audit was originally written. See
+`defects.md` D1 and D2 for detail and impact.
+
+**Re-verified 2026-07-19, after syncing this branch with `main`:** the compile check now passes
+(`utills.py` was renamed to `utils.py` by PR #4, outside this audit issue's scope — D1 is
+resolved). The tracked-`results/`-files check still fails identically (D2 remains open,
+unresolved, owner decision pending per `recovery_plan.md`).
 
 ## Safety posture of generated-code execution
 
-`utills.py::run_code_with_tests` (and its notebook counterparts, see `notebook_inventory.md`) run
+`utils.py::run_code_with_tests` (and its notebook counterparts, see `notebook_inventory.md`) run
 generated HumanEval candidates via `multiprocessing.Process` with a wall-clock `timeout` and
 `terminate()` on expiry. There is no memory/CPU bound, no filesystem restriction, and no network
 denial at the process level — weaker than `.ai/DEFINITION_OF_DONE.md`'s "isolated subprocess/
@@ -92,6 +97,6 @@ issue's non-goals.
 ## HumanEval integrity check
 
 The HumanEval dataset row includes a `canonical_solution` field (the hidden reference answer).
-Every prompt-building and feedback-building function reachable from `run.py`/`utills.py` was
+Every prompt-building and feedback-building function reachable from `run.py`/`utils.py` was
 inspected; none of them reference `canonical_solution`. The same check was run against all four
 private notebooks (see `notebook_inventory.md`) with the same result. No leakage path was found.

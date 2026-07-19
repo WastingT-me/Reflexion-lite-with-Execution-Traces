@@ -12,7 +12,7 @@ task -> build_baseline_prompt -> Mistral generate -> extract_python_code
      -> run_code_with_tests (pass/fail + traceback)
      -> [reflexion-lite only] retry with raw error text folded into next prompt, up to max_iters
      -> [reflexion+trace, NOT WIRED] would need: previous failing candidate + concrete
-        assert-derived test cases (utills.py::extract_humaneval_tests_for_tasks, currently dead)
+        assert-derived test cases (utils.py::extract_humaneval_tests_for_tasks, currently dead)
         -> (manual, outside this repo, evidence only) Python->C -> WASM -> Transformer-VM -> raw trace
         -> (manual, outside this repo, evidence only) GPT-5 compression -> semantic_trace/feedback_text
         -> build_trace_reflection_prompt / solve_task_reflexion_trace (both dead code today)
@@ -27,9 +27,9 @@ in any inspected artifact (D4). It is a human-in-the-loop process whose only sur
 ```text
 reflexion_lite/config.py       new — validated CLI/experiment config (currently argparse only)
 reflexion_lite/tasks.py        mostly inherited from task_registry.py, already correct
-reflexion_lite/models.py       inherited generation logic from utills.py, but must resolve D9's
+reflexion_lite/models.py       inherited generation logic from utils.py, but must resolve D9's
                                 chat-template and reflection-step divergences first
-reflexion_lite/prompts.py      inherited from utills.py + notebook, must decide D9 items explicitly
+reflexion_lite/prompts.py      inherited from utils.py + notebook, must decide D9 items explicitly
 reflexion_lite/execution.py    inherited concept, two divergent implementations to reconcile (D9)
 reflexion_lite/agents.py       baseline/reflexion-lite inherited and working end-to-end;
                                 reflexion+trace exists as dead code (D3), needs wiring only
@@ -48,11 +48,12 @@ reflexion_lite/trace_pipeline/historical.py    recovered — schema known exactl
 
 ## Ordered issue backlog
 
-1. **Fix the `utils`/`utills` import mismatch so the CLI runs at all.**
+1. **DONE — Fix the `utils`/`utills` import mismatch so the CLI runs at all.**
    Category: Agent-designed (bug fix, no notebook recovery involved).
    Test: `python -m py_compile run.py task_registry.py utils.py` succeeds; `python run.py --method
-   baseline --help` runs without `ModuleNotFoundError`.
-   Blocks everything below — the CLI is currently non-functional (D1).
+   baseline --help` runs without a module-name `ModuleNotFoundError`.
+   Fixed on `main` by commit `70880ed` (PR #4, merged 2026-07-19), outside this audit issue's
+   scope. No longer blocks the rest of this backlog — see `defects.md` D1.
 
 2. **Resolve the tracked-`results/`-vs-CI-gate conflict (owner-directed decision required).**
    Either (a) explicitly allow the three named historical files in the CI grep / document them as
@@ -69,7 +70,7 @@ reflexion_lite/trace_pipeline/historical.py    recovered — schema known exactl
 4. **Reconcile the duplicated execution/prompt/extraction helpers (D9) with characterization
    tests before consolidating into `reflexion_lite/execution.py` and `prompts.py`.** Decide,
    explicitly and owner-visible: chat-template vs. raw f-string prompts; single-shot vs. two-step
-   reflection generation (the paper's described loop uses the two-step form; current `utills.py`
+   reflection generation (the paper's described loop uses the two-step form; current `utils.py`
    does not). Category: Recovered + Owner-directed (behavioral choice).
    Test: characterization tests pinning current `run.py` behavior, then updated tests for the
    chosen behavior.
