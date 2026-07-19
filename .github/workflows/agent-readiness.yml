@@ -33,8 +33,15 @@ jobs:
             echo 'Forbidden secret file is tracked'
             exit 1
           fi
-          if git ls-files | grep -E '(^|/)(__pycache__|results)/'; then
-            echo 'Generated output is tracked'
+          # These three files are intentionally tracked historical pilot
+          # artifacts committed in the project's initial commit, not disposable
+          # generated output. Every other path under __pycache__/ or results/
+          # is still rejected below.
+          ALLOWED_HISTORICAL_ARTIFACTS='^results/pilot5_humaneval_tests\.jsonl$|^results/pilot5_python_solutions\.jsonl$|^results/pilot5_semantic_feedback\.jsonl$'
+          UNEXPECTED_GENERATED_OUTPUT=$(git ls-files | grep -E '(^|/)(__pycache__|results)/' | grep -vE "$ALLOWED_HISTORICAL_ARTIFACTS" || true)
+          if [ -n "$UNEXPECTED_GENERATED_OUTPUT" ]; then
+            echo 'Generated output is tracked:'
+            echo "$UNEXPECTED_GENERATED_OUTPUT"
             exit 1
           fi
       - name: Check whitespace errors
